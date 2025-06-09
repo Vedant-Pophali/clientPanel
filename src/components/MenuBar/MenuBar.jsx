@@ -1,8 +1,8 @@
 import React, { useContext, useState } from 'react';
-import './MenuBar.css';
 import { Link, useNavigate } from 'react-router-dom';  
 import { assets } from '../../assets/assets';
 import { StoreContext } from '../../context/StoreContext';
+import './Menubar.css'
 
 const MenuBar = () => {
   const [active, setActive] = useState('home');   
