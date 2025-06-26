@@ -6,7 +6,7 @@ import "react-toastify/dist/ReactToastify.css";
 import "./Login.css";
 import { StoreContext } from '../../context/StoreContext';
 
-const API_URL = "http://localhost:8080/api/login";
+const API_URL = "https://foodapps-production.up.railway.app/api/login";
 
 const login = async (data) => {
   return await axios.post(API_URL, data, {

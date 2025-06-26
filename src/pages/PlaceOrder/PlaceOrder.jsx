@@ -69,7 +69,7 @@ const PlaceOrder = () => {
 
     try {
       const response = await axios.post(
-        'http://localhost:8080/api/order/create',
+        'https://foodapps-production.up.railway.app/api/order/create',
         orderData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
