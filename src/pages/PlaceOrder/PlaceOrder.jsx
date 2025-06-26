@@ -12,7 +12,6 @@ const PlaceOrder = () => {
   const { foodList, quantities, setQuantities, token } = useContext(StoreContext);
   const navigate = useNavigate();
 
-  // Form state
   const [data, setData] = useState({
     firstname: "",
     lastname: "",
@@ -24,38 +23,29 @@ const PlaceOrder = () => {
     zip: "",
   });
 
-  // Filter cart items based on quantity > 0
   const cartItems = foodList.filter(food => quantities[food.id] > 0);
-
-  // Calculate totals
   const { subtotal, shipping, tax, total } = calculateCartTotals(cartItems, quantities);
 
-  // Handle form input changes
   const onChangeHandler = (event) => {
     const { name, value } = event.target;
-    setData(prevData => ({ ...prevData, [name]: value }));
+    setData(prev => ({ ...prev, [name]: value }));
   };
 
-  // Clear cart quantities after successful payment
   const clearCart = () => {
-    const clearedQuantities = {};
-    foodList.forEach(food => {
-      clearedQuantities[food.id] = 0;
-    });
-    setQuantities(clearedQuantities);
+    const cleared = {};
+    foodList.forEach(food => cleared[food.id] = 0);
+    setQuantities(cleared);
   };
 
-  // Handle order form submission
   const onSubmitHandler = async (event) => {
     event.preventDefault();
 
-    // Prepare order data payload
     const orderData = {
       userAddress: `${data.firstname} ${data.lastname}, ${data.address}, ${data.city}, ${data.state}, ${data.zip}`,
       phoneNumber: data.phoneNumber,
       email: data.email,
       orderedItems: cartItems.map(item => ({
-        foodId: item.id,                      // Corrected: use item.id not item.foodId
+        foodId: item.id,
         quantity: quantities[item.id],
         price: item.price * quantities[item.id],
         category: item.category,
@@ -63,13 +53,13 @@ const PlaceOrder = () => {
         description: item.description,
         name: item.name
       })),
-      amount: parseFloat(total.toFixed(2)),  // Ensure amount is a number
+      amount: parseFloat(total.toFixed(2)),
       orderStatus: "Preparing"
     };
 
     try {
       const response = await axios.post(
-        'https://foodapps-production.up.railway.app/api/order/create',
+        `${import.meta.env.VITE_API_BASE_URL}/order/create`,
         orderData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -84,11 +74,10 @@ const PlaceOrder = () => {
     }
   };
 
-  // Initialize Razorpay payment
   const initiateRazorpayPayment = (order) => {
     const options = {
       key: RAZORPAY_KEY,
-      amount: order.amount * 100, // Razorpay expects amount in paise (multiply by 100)
+      amount: order.amount * 100,
       currency: "INR",
       name: "Food Village",
       description: "Food Order Payment",
@@ -100,7 +89,7 @@ const PlaceOrder = () => {
       prefill: {
         name: `${data.firstname} ${data.lastname}`,
         email: data.email,
-        contact: data.phoneNumber // Razorpay expects 'contact' instead of 'phoneNumber'
+        contact: data.phoneNumber
       },
       theme: { color: "#3399cc" },
       modal: {
@@ -115,11 +104,10 @@ const PlaceOrder = () => {
     rzp.open();
   };
 
-  // Verify payment on backend
   const verifyPayment = async (response, orderId) => {
     try {
       const res = await axios.post(
-        "http://localhost:8080/api/order/verify",
+        `${import.meta.env.VITE_API_BASE_URL}/order/verify`,
         {
           razorpay_payment_id: response.razorpay_payment_id,
           razorpay_order_id: response.razorpay_order_id,
@@ -128,6 +116,7 @@ const PlaceOrder = () => {
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+
       if (res.status === 200) {
         toast.success("Payment successful!");
         clearCart();
@@ -141,10 +130,9 @@ const PlaceOrder = () => {
     }
   };
 
-  // Delete order on payment failure/cancellation
   const deleteOrder = async (orderId) => {
     try {
-      await axios.delete(`http://localhost:8080/api/order/${orderId}`, {
+      await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/order/${orderId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
     } catch (error) {
@@ -160,7 +148,6 @@ const PlaceOrder = () => {
         </div>
 
         <div className="row g-5">
-          {/* Order Summary */}
           <div className="col-md-5 col-lg-4 order-md-last">
             <h4 className="d-flex justify-content-between align-items-center mb-3">
               <span className="text-primary">Order Summary</span>
@@ -191,83 +178,36 @@ const PlaceOrder = () => {
             </ul>
           </div>
 
-          {/* Billing Address Form */}
           <div className="col-md-7 col-lg-8">
             <h4 className="mb-3">Billing address</h4>
             <form className="needs-validation" onSubmit={onSubmitHandler} noValidate>
               <div className="row g-3">
                 <div className="col-sm-6">
                   <label className="form-label">First name</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Akshay"
-                    required
-                    name="firstname"
-                    onChange={onChangeHandler}
-                    value={data.firstname}
-                  />
+                  <input type="text" className="form-control" name="firstname" placeholder="Akshay" required onChange={onChangeHandler} value={data.firstname} />
                 </div>
                 <div className="col-sm-6">
                   <label className="form-label">Last name</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Kumar"
-                    required
-                    name="lastname"
-                    onChange={onChangeHandler}
-                    value={data.lastname}
-                  />
+                  <input type="text" className="form-control" name="lastname" placeholder="Kumar" required onChange={onChangeHandler} value={data.lastname} />
                 </div>
                 <div className="col-12">
                   <label className="form-label">Email</label>
                   <div className="input-group">
                     <span className="input-group-text">@</span>
-                    <input
-                      type="email"
-                      className="form-control"
-                      placeholder="you@example.com"
-                      required
-                      name="email"
-                      onChange={onChangeHandler}
-                      value={data.email}
-                    />
+                    <input type="email" className="form-control" name="email" placeholder="you@example.com" required onChange={onChangeHandler} value={data.email} />
                   </div>
                 </div>
                 <div className="col-12">
                   <label className="form-label">Address</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="1234 Street"
-                    required
-                    name="address"
-                    onChange={onChangeHandler}
-                    value={data.address}
-                  />
+                  <input type="text" className="form-control" name="address" placeholder="1234 Street" required onChange={onChangeHandler} value={data.address} />
                 </div>
                 <div className="col-12">
                   <label className="form-label">Phone Number</label>
-                  <input
-                    type="tel"
-                    className="form-control"
-                    placeholder="9876543210"
-                    required
-                    name="phoneNumber"
-                    onChange={onChangeHandler}
-                    value={data.phoneNumber}
-                  />
+                  <input type="tel" className="form-control" name="phoneNumber" placeholder="9876543210" required onChange={onChangeHandler} value={data.phoneNumber} />
                 </div>
                 <div className="col-md-4">
                   <label className="form-label">State</label>
-                  <select
-                    className="form-select"
-                    name="state"
-                    required
-                    onChange={onChangeHandler}
-                    value={data.state}
-                  >
+                  <select className="form-select" name="state" required onChange={onChangeHandler} value={data.state}>
                     <option value="">Choose...</option>
                     <option value="Maharashtra">Maharashtra</option>
                     <option value="Tamil Nadu">Tamil Nadu</option>
@@ -278,37 +218,17 @@ const PlaceOrder = () => {
                 </div>
                 <div className="col-md-4">
                   <label className="form-label">City</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Enter city"
-                    required
-                    name="city"
-                    onChange={onChangeHandler}
-                    value={data.city}
-                  />
+                  <input type="text" className="form-control" name="city" placeholder="Enter city" required onChange={onChangeHandler} value={data.city} />
                 </div>
                 <div className="col-md-4">
                   <label className="form-label">Zip</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="123456"
-                    required
-                    name="zip"
-                    onChange={onChangeHandler}
-                    value={data.zip}
-                  />
+                  <input type="text" className="form-control" name="zip" placeholder="123456" required onChange={onChangeHandler} value={data.zip} />
                 </div>
               </div>
 
               <hr className="my-4" />
 
-              <button
-                className="w-100 btn btn-primary btn-lg"
-                type="submit"
-                disabled={cartItems.length === 0}
-              >
+              <button className="w-100 btn btn-primary btn-lg" type="submit" disabled={cartItems.length === 0}>
                 Continue to checkout
               </button>
             </form>

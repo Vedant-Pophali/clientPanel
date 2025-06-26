@@ -1,2 +1,2 @@
-const RAZORPAY_KEY = "rzp_test_9tUk7XpnNc0rbS";
+const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY;
 export default RAZORPAY_KEY;
