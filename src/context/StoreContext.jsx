@@ -1,6 +1,11 @@
 import React, { createContext, useEffect, useState } from "react";
 import { fetchFoodList } from "../service/foodService";
-import { addToCart, removeQtyFromCart, getCartData, removeItemFromCart } from "../service/cartService";
+import {
+  addToCart,
+  removeQtyFromCart,
+  getCartData,
+  removeItemFromCart,
+} from "../service/cartService";
 
 export const StoreContext = createContext(null);
 
@@ -9,27 +14,52 @@ export const StoreContextProvider = (props) => {
   const [token, setToken] = useState("");
   const [quantities, setQuantities] = useState({});
 
+  const isTokenValid = (token) => {
+    if (!token) return false;
+    try {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      return payload.exp * 1000 > Date.now();
+    } catch (e) {
+      console.warn("Invalid token structure");
+      return false;
+    }
+  };
+
+  const getValidToken = () => {
+    const localToken = token || localStorage.getItem("token");
+    return isTokenValid(localToken) ? localToken : null;
+  };
+
   const increaseQty = async (foodId) => {
+    const validToken = getValidToken();
+    if (!validToken) return;
+
     setQuantities((prev) => ({
       ...prev,
       [foodId]: (prev[foodId] || 0) + 1,
     }));
-    await addToCart(foodId, token);
+
+    await addToCart(foodId, validToken);
   };
 
   const decreaseQty = async (foodId) => {
+    const validToken = getValidToken();
+    if (!validToken) return;
+
     setQuantities((prev) => ({
       ...prev,
       [foodId]: prev[foodId] > 0 ? prev[foodId] - 1 : 0,
     }));
-    await removeQtyFromCart(foodId, token);
+
+    await removeQtyFromCart(foodId, validToken);
   };
 
-  // Updated removeFromCart to call API and remove from DB
   const removeFromCart = async (foodId) => {
-    if (!token) return;
+    const validToken = getValidToken();
+    if (!validToken) return;
+
     try {
-      await removeItemFromCart(foodId, token);
+      await removeItemFromCart(foodId, validToken);
       setQuantities((prev) => {
         const updated = { ...prev };
         delete updated[foodId];
@@ -40,8 +70,13 @@ export const StoreContextProvider = (props) => {
     }
   };
 
-  const loadCartData = async (token) => {
-    const items = await getCartData(token);
+  const loadCartData = async (passedToken) => {
+    const validToken = isTokenValid(passedToken)
+      ? passedToken
+      : getValidToken();
+    if (!validToken) return;
+
+    const items = await getCartData(validToken);
     setQuantities(items);
   };
 
@@ -51,9 +86,12 @@ export const StoreContextProvider = (props) => {
       setFoodList(data);
 
       const localToken = localStorage.getItem("token");
-      if (localToken) {
+      if (isTokenValid(localToken)) {
         setToken(localToken);
         await loadCartData(localToken);
+      } else {
+        localStorage.removeItem("token");
+        console.warn("Expired or invalid token removed.");
       }
     }
     loadData();
