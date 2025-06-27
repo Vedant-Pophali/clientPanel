@@ -12,6 +12,8 @@ const PlaceOrder = () => {
   const { foodList, quantities, setQuantities, token } = useContext(StoreContext);
   const navigate = useNavigate();
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const [data, setData] = useState({
     firstname: "",
     lastname: "",
@@ -39,6 +41,9 @@ const PlaceOrder = () => {
 
   const onSubmitHandler = async (event) => {
     event.preventDefault();
+
+    if (isSubmitting) return; // prevent double submit
+    setIsSubmitting(true);
 
     const orderData = {
       userAddress: `${data.firstname} ${data.lastname}, ${data.address}, ${data.city}, ${data.state}, ${data.zip}`,
@@ -68,9 +73,11 @@ const PlaceOrder = () => {
         initiateRazorpayPayment(response.data);
       } else {
         toast.error("Unable to place order");
+        setIsSubmitting(false);
       }
     } catch (error) {
       toast.error("Unable to place order");
+      setIsSubmitting(false);
     }
   };
 
@@ -96,6 +103,7 @@ const PlaceOrder = () => {
         ondismiss: async function () {
           toast.error("Payment Cancelled");
           await deleteOrder(order.id);
+          setIsSubmitting(false);
         }
       }
     };
@@ -120,13 +128,16 @@ const PlaceOrder = () => {
       if (res.status === 200) {
         toast.success("Payment successful!");
         clearCart();
+        setIsSubmitting(false);
         navigate('/myOrders');
       } else {
         toast.error("Payment verification failed");
+        setIsSubmitting(false);
         navigate('/');
       }
     } catch (error) {
       toast.error("Payment verification failed");
+      setIsSubmitting(false);
     }
   };
 
@@ -228,8 +239,8 @@ const PlaceOrder = () => {
 
               <hr className="my-4" />
 
-              <button className="w-100 btn btn-primary btn-lg" type="submit" disabled={cartItems.length === 0}>
-                Continue to checkout
+              <button className="w-100 btn btn-primary btn-lg" type="submit" disabled={cartItems.length === 0 || isSubmitting}>
+                {isSubmitting ? "Processing..." : "Continue to checkout"}
               </button>
             </form>
           </div>
